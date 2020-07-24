@@ -48,6 +48,14 @@ class Venue(db.Model):
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
     # add show relation
     artists = db.relationship('Show', back_populates='venue')
+    def past_shows(self):
+      return Show.query.filter(self.id == Show.venue_id,Show.start_time <= datetime.utcnow()).all()
+    def upcoming_shows(self):
+      return Show.query.filter(self.id == Show.venue_id,Show.start_time > datetime.utcnow()).all()
+    def num_upcoming_shows(self):
+      return len(Show.query.filter(self.id == Show.venue_id,Show.start_time > datetime.utcnow()).all())
+    def num_past_shows(self):
+      return len(Show.query.filter(self.id == Show.venue_id,Show.start_time <= datetime.utcnow()).all())
 
 class Artist(db.Model):
     __tablename__ = 'Artist'
@@ -66,6 +74,14 @@ class Artist(db.Model):
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
     # add show relation
     venues = db.relationship('Show', back_populates='artist')
+    def past_shows(self):
+      return Show.query.filter(self.id == Show.artist_id,Show.start_time <= datetime.utcnow()).all()
+    def upcoming_shows(self):
+      return Show.query.filter(self.id == Show.artist_id,Show.start_time > datetime.utcnow()).all()
+    def num_upcoming_shows(self):
+      return len(Show.query.filter(self.id == Show.artist_id,Show.start_time > datetime.utcnow()).all())
+    def num_past_shows(self):
+      return len(Show.query.filter(self.id == Show.artist_id,Show.start_time <= datetime.utcnow()).all())
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 class Show(db.Model):
@@ -133,12 +149,8 @@ def search_venues():
     "data":[]
   }
   for venue in venues:
-    response['data'].append({
-      "id": venue.id,
-      "name": venue.name,
-      "num_upcoming_shows": len(Venue.query.join(Show).filter(venue.id == Show.venue_id,Show.start_time > current_time).all()),
-    })
-  return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
+    response['data'].append(venue)
+  return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term'))
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
@@ -146,8 +158,8 @@ def show_venue(venue_id):
   # TODO: replace with real venue data from the venues table, using venue_id
   current_time = datetime.utcnow()
   target_venue = Venue.query.filter_by(id=venue_id).first()
-  past_shows = Show.query.join(Venue).join(Artist).filter(venue_id == Show.venue_id,Show.start_time <= current_time).all()
-  upcoming_shows = Show.query.join(Venue).join(Artist).filter(venue_id == Show.venue_id,Show.start_time > current_time).all()
+  past_shows = target_venue.past_shows()
+  upcoming_shows = target_venue.upcoming_shows()
   past_shows_count = len(past_shows)
   upcoming_shows_count = len(upcoming_shows)
   return render_template('pages/show_venue.html', venue=target_venue, past_shows=past_shows, upcoming_shows=upcoming_shows, past_shows_count=past_shows_count, upcoming_shows_count=upcoming_shows_count)
@@ -223,33 +235,27 @@ def search_artists():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
-  search_term=request.form.get('search_term', '')
-  current_time = datetime.utcnow()
+  search_term=request.form.get('search_term')
   artists = Artist.query.filter(Artist.name.ilike('%'+search_term+'%')).all()
   response={
       "count": len(artists),
       "data":[]
     }
   for artist in artists:
-    response['data'].append({
-      "id": artist.id,
-      "name": artist.name,
-      "num_upcoming_shows": len(Artist.query.join(Show).filter(artist.id == Show.artist_id, Show.start_time > current_time).all())
-    })
-  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+    response['data'].append(artist)
+  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term'))
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-  current_time = datetime.utcnow()
   target_artist = Artist.query.filter_by(id=artist_id).first()
-  data = target_artist
-  past_shows = Show.query.join(Venue).join(Artist).filter(artist_id == Show.artist_id,Show.start_time <= current_time).all()
-  upcoming_shows = Show.query.join(Venue).join(Artist).filter(artist_id == Show.artist_id,Show.start_time > current_time).all() 
+  past_shows = target_artist.past_shows()
+  upcoming_shows = target_artist.upcoming_shows()
   past_shows_count = len(past_shows)
   upcoming_shows_count = len(upcoming_shows)
-  return render_template('pages/show_artist.html', artist=data, past_shows=past_shows, upcoming_shows=upcoming_shows, past_shows_count=past_shows_count, upcoming_shows_count=upcoming_shows_count)
+  print(upcoming_shows)
+  return render_template('pages/show_artist.html', artist=target_artist, past_shows=past_shows, upcoming_shows=upcoming_shows, past_shows_count=past_shows_count, upcoming_shows_count=upcoming_shows_count)
 
 #  Update
 #  ----------------------------------------------------------------
