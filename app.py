@@ -130,7 +130,7 @@ def venues():
       group['venues'].append({
         'id': venue.id,
         'name': venue.name,
-        'num_upcoming_show': len(Venue.query.join(Show).filter(venue.id == Show.venue_id,Show.start_time > current_time).all())
+        'num_upcoming_show': venue.num_upcoming_shows()
       })    
     result.append(group)  
     print(result)   
