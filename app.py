@@ -113,27 +113,24 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
-  venues = db.session.query(Venue.city,Venue.state).group_by(Venue.city,Venue.state).all()
+  areas = db.session.query(Venue.state, Venue.city).group_by(Venue.state, Venue.city).all()
   result = []
-  current_time = datetime.utcnow()
-  for venue in venues: 
-    city = venue[0]
-    state = venue[1]
-    grouping = db.session.query(Venue).filter(Venue.city == city, Venue.state == state)
-    venues = grouping.all()
-    group = {
-      "city": city,
+  for area in areas: 
+    state = area[0]
+    city = area[1]
+    venues = db.session.query(Venue).filter(Venue.state == state, Venue.city == city).all()
+    venues_group = {
       "state": state,
+      "city": city,
       "venues": []
     }
     for venue in venues: 
-      group['venues'].append({
+      venues_group['venues'].append({
         'id': venue.id,
         'name': venue.name,
         'num_upcoming_show': venue.num_upcoming_shows()
       })    
-    result.append(group)  
-    print(result)   
+    result.append(venues_group)   
   return render_template('pages/venues.html', areas=result)
 
 @app.route('/venues/search', methods=['POST'])
@@ -142,7 +139,6 @@ def search_venues():
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
   search_term=request.form.get('search_term', '')
-  current_time = datetime.utcnow()
   venues = Venue.query.filter(Venue.name.ilike('%'+search_term+'%')).all()
   response={
     "count": len(venues),
@@ -156,7 +152,6 @@ def search_venues():
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-  current_time = datetime.utcnow()
   target_venue = Venue.query.filter_by(id=venue_id).first()
   past_shows = target_venue.past_shows()
   upcoming_shows = target_venue.upcoming_shows()
